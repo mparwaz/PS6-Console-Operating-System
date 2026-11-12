@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PS6 Concept UI - Exact Recreation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --ps-blue: #0070cc;
+            --ps-gold: #c5a059;
+            --ps-gold-light: #e8c77b;
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --glass-bg: rgba(20, 20, 25, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --overlay-gradient: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 40%, var(--bg-color) 100%);
+            --modal-bg: rgba(15, 15, 15, 0.95);
+            --card-shadow: rgba(0,0,0,0.5);
+            --user-bg: #f0f4f8;
+        }
+
+        body.theme-light {
+            --bg-color: #f8fafc;
+            --text-color: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.7);
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --overlay-gradient: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.8) 40%, var(--bg-color) 100%);
+            --modal-bg: rgba(255, 255, 255, 0.95);
+            --card-shadow: rgba(0,0,0,0.1);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        #app-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #dynamic-bg {
+            position: absolute;
+            inset: -5%;
+            width: 110%;
+            height: 110%;
+            background-size: cover;
+            background-position: center 20%;
+            z-index: 0;
+            transition: background-image 0.6s ease-in-out;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--overlay-gradient);
+            z-index: 1;
+            transition: background 0.5s ease;
+        }
+
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--card-shadow);
+        }
+
+        .header-line { position: relative; }
+        .header-line::after {
+            content: ''; position: absolute; bottom: -8px; left: 0; width: 100%; height: 2px;
+            background: var(--ps-blue); box-shadow: 0 0 10px var(--ps-blue);
+        }
+
+        .tab-active {
+            border: 1px solid var(--ps-blue); border-radius: 999px; padding: 4px 20px;
+            box-shadow: 0 0 15px rgba(0, 112, 204, 0.4) inset;
+        }
+
+        /* Shelf & Cards */
+        #shelf-container { flex: 1; display: flex; align-items: flex-end; padding-bottom: 8vh; padding-left: 6vw; overflow: visible; }
+        #shelf { display: flex; gap: 1.5vw; align-items: flex-end; transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        
+        .card {
+            width: clamp(100px, 10vw, 160px); height: clamp(140px, 14vw, 224px);
+            border-radius: 16px; cursor: pointer; position: relative; flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            -webkit-box-reflect: below 2px linear-gradient(transparent 60%, rgba(0,0,0,0.3));
+        }
+
+        .card:not(.active) { opacity: 0.7; transform: scale(0.95); }
+        .card.active {
+            width: clamp(140px, 14vw, 220px); height: clamp(200px, 20vw, 320px);
+            transform: translateY(-20px); border: 2px solid var(--ps-blue);
+            box-shadow: 0 0 25px rgba(0, 112, 204, 0.6); opacity: 1; z-index: 20;
+        }
+
+        .card-inner-ui {
+            position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            padding: 20px 10px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+            border-radius: 14px; opacity: 0; transition: opacity 0.3s;
+        }
+
+        .card-bg-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; position: absolute; inset: 0; z-index: -1; }
+        .card.active .card-inner-ui { opacity: 1; }
+
+        /* Views */
+        .view-section {
+            display: none; height: 100%; width: 100%; position: absolute; inset: 0; z-index: 15;
+            background: var(--bg-color); padding: 100px 6vw 40px; animation: fadeIn 0.3s;
+        }
+        .view-section.active { display: block; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+
+        .gold-curve { position: absolute; z-index: 0; }
+        .curve-tl { top: 0; left: 0; width: 40vw; max-width: 400px; }
+        .curve-br { bottom: 0; right: 0; width: 40vw; max-width: 400px; transform: rotate(180deg); }
+
+        .user-card {
+            background: white; border-radius: 16px; width: 180px; height: 260px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: all 0.3s; cursor: pointer;
+            position: relative;
+            -webkit-box-reflect: below 5px linear-gradient(transparent 50%, rgba(255,255,255,0.4));
+        }
+        .user-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .user-card.selected {
+            background: linear-gradient(135deg, var(--ps-gold-light), var(--ps-gold));
+            color: white; transform: translateY(-15px) scale(1.05); box-shadow: 0 20px 40px rgba(197, 160, 89, 0.4);
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(197,160,89,0.7); } 70% { box-shadow: 0 0 0 15px rgba(197,160,89,0); } 100% { box-shadow: 0 0 0 0 rgba(197,160,89,0); } }
+
+    </style>
+</head>
+<body class="theme-dark">
+
+    <script>
+        let psDrone, psBlip, psConfirm, psStartup;
+        let audioInitialized = false;
+
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            
+            psDrone = new Tone.Oscillator({ frequency: 55, type: "sine", volume: -25 }).toDestination();
+            
+            psBlip = new Tone.Synth({
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            psBlip.volume.value = -15;
+
+            psConfirm = new Tone.MembraneSynth({
+                pitchDecay: 0.05, octaves: 4, oscillator: { type: "sine" },
+                envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 1.4 }
+            }).toDestination();
+            psConfirm.volume.value = -10;
+
+            psStartup = new Tone.FMSynth({
+                harmonicity: 3, modulationIndex: 10, detachment: 0,
+                oscillator: { type: "sine" }, envelope: { attack: 0.1, decay: 0.2, sustain: 1, release: 2 },
+                modulation: { type: "square" }, modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0.2, release: 0.1 }
+            }).toDestination();
+            psStartup.volume.value = -15;
+
+            audioInitialized = true;
+        }
+
+        function playHover() { if(audioInitialized) psBlip.triggerAttackRelease("C5", "32n"); }
+        function playConfirm() { if(audioInitialized) psConfirm.triggerAttackRelease("E2", "8n"); }
+        function playBoot() { if(audioInitialized) psStartup.triggerAttackRelease("G2", "2n"); }
+    </script>
+
+    <div id="boot-screen" class="absolute inset-0 z-[200] bg-white text-black flex flex-col items-center justify-center transition-opacity duration-1000 cursor-pointer" onclick="advanceToUserSelect()">
+        <!-- Gold Curves (SVG approximations of the corners) -->
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="gold-curve curve-tl">
+            <path d="M0,0 L100,0 C100,0 60,30 0,40 Z" fill="url(#goldGrad)" />
+            <defs>
+                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#e8c77b"/>
+                    <stop offset="100%" stop-color="#c5a059"/>
+                </linearGradient>
+            </defs>
+        </svg>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="gold-curve curve-br">
+            <path d="M0,0 L100,0 C100,0 60,30 0,40 Z" fill="url(#goldGrad)" />
+        </svg>
+
+        <div class="flex items-center text-[var(--ps-gold)] text-7xl font-bold mb-6" style="font-family: 'Orbitron'">
+            <i class="fab fa-playstation mr-4"></i> PS6<span class="text-lg mb-8 ml-1">TM</span>
+        </div>
+        
+        <p class="text-2xl font-light mb-4">Welcome back to playstation®</p>
+        <div class="flex items-center text-xl font-light">
+            Press the 
+            <div class="mx-3 w-10 h-10 rounded-full border-2 border-[var(--ps-gold)] flex items-center justify-center text-[var(--ps-gold)] shadow-[0_0_15px_rgba(197,160,89,0.5)] animate-pulse">
+                <i class="fab fa-playstation text-sm"></i>
+            </div> 
+            button on your controller.
+        </div>
+        <p class="absolute bottom-8 text-[var(--text-muted)] text-xs tracking-widest uppercase">CHRI-TV</p>
+    </div>
+
+    <div id="user-select-screen" class="absolute inset-0 z-[150] bg-[#f0f4f8] text-[#111] flex flex-col items-center justify-center transition-opacity duration-700 hidden">
+        <div class="absolute top-8 left-8 text-3xl font-bold tracking-widest" style="font-family: 'Orbitron'">PS6</div>
+        <div class="absolute top-8 right-8 text-3xl font-light clock-display">16:07</div>
+
+        <div class="text-center mb-12 animate-[slideDown_0.5s_ease-out]">
+            <p class="font-bold text-lg mb-2 flex items-center justify-center gap-2">
+                <i class="fas fa-gamepad"></i> DUALSENSE 2.0 wireless controller connected
+            </p>
+            <h1 class="text-3xl font-light">Who is using this controller?</h1>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-6 relative z-10 px-4">
+            <!-- Add User -->
+            <div class="user-card" onmouseenter="playHover()" onclick="playConfirm()">
+                <div class="text-5xl mb-4 font-light">+</div>
+                <h3 class="font-bold text-sm">Create User</h3>
+                <p class="text-[9px] opacity-60 text-center px-4 mt-2">Add a new user to this console</p>
+            </div>
+
+            <!-- CHRI-TV (Active) -->
+            <div class="user-card selected group" onclick="loginToHome()">
+                <div class="w-20 h-20 bg-purple-900 rounded flex items-center justify-center mb-4 border-2 border-white/20 shadow-lg relative overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Chri" class="w-full h-full object-cover">
+                </div>
+                <h3 class="font-bold text-sm">CHRI-TV <i class="fas fa-plus text-[10px] text-white"></i></h3>
+                <p class="text-[9px] text-white/80 mt-1 mb-4">Last online 2 hours ago</p>
+                <div class="bg-white text-[var(--ps-gold)] px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 shadow-md">
+                    <i class="fas fa-times text-[8px] bg-[var(--ps-gold)] text-white rounded-full w-3 h-3 flex items-center justify-center"></i> Tap to sign in
+                </div>
+            </div>
+
+            <!-- moreCHRI-TV -->
+            <div class="user-card" onmouseenter="playHover()" onclick="playConfirm()">
+                <div class="w-20 h-20 bg-blue-500 rounded flex items-center justify-center mb-4 overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=more" class="w-full h-full object-cover">
+                </div>
+                <h3 class="font-bold text-sm">moreCHRI-TV</h3>
+                <p class="text-[9px] opacity-60 mt-1">Last online yesterday</p>
+            </div>
+
+            <!-- Guest -->
+            <div class="user-card" onmouseenter="playHover()" onclick="playConfirm()">
+                <i class="fas fa-dice text-4xl mb-4 text-gray-700"></i>
+                <h3 class="font-bold text-sm">Play as Guest</h3>
+                <p class="text-[9px] opacity-60 text-center px-4 mt-2">All data will be deleted after you log out</p>
+            </div>
+        </div>
+        <p class="absolute bottom-8 opacity-20 text-xs tracking-widest uppercase font-bold text-center w-full">CHRI TV</p>
+    </div>
+
+    <div id="app-container" class="opacity-0 transition-opacity duration-1000 hidden">
+        <div id="dynamic-bg" style="background-image: url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920');"></div>
+        <div class="bg-overlay"></div>
+
+        <div id="ui-layer">
+            <!-- Header -->
+            <header class="w-full px-[4vw] py-[3vh] flex justify-between items-start z-50">
+                
+                <!-- Left Icons -->
+                <div class="flex gap-4 items-center header-line pb-2 text-sm text-[var(--text-color)]">
+                    <span class="font-semibold tracking-wide clock-display">16:07</span>
+                    <button class="hover:text-[var(--ps-blue)] transition" onclick="openModal('Network Status', 'Connected to PSN via Wi-Fi (5GHz).<br><br>Download: 845 Mbps<br>Upload: 45 Mbps')"><i class="fas fa-wifi text-xs"></i></button>
+                    <button class="hover:text-[var(--ps-blue)] transition" onclick="openModal('Controllers', 'DUALSENSE 2.0 Connected.<br>Battery: 85%<br>Haptics: Enabled')"><i class="fas fa-gamepad text-xs"></i></button>
+                    <div class="relative flex items-center cursor-pointer group" onclick="openModal('Notifications', '1. System Update Version 1.0.01 installed.<br>2. Gran Turismo 8 downloaded successfully.')">
+                        <i class="fas fa-bell text-xs group-hover:text-[var(--ps-blue)] transition"></i>
+                        <span class="absolute -top-2 -right-3 text-[9px] bg-red-500 text-white px-1 rounded font-bold">2</span>
+                    </div>
+                    <button class="hover:text-[var(--ps-blue)] transition ml-2" onclick="openModal('Messages', 'You have 3 new messages from Group: Raid Team.')"><i class="fas fa-comment text-xs"></i></button>
+                    <button class="hover:text-[var(--ps-gold)] transition ml-2" onclick="openModal('Trophies', 'Recent Trophy:<br><b>Platinum - Survivor</b><br>The Last of Us Part III')"><i class="fas fa-trophy text-xs text-[var(--ps-gold)]"></i></button>
+                </div>
+
+                <!-- Center Navigation -->
+                <div class="flex items-center gap-6 lg:gap-10 text-[13px] font-bold tracking-wide">
+                    <div class="border border-[var(--text-muted)] rounded px-2 py-0.5 text-[10px] text-[var(--text-muted)] mr-2">L1</div>
+                    <span class="cursor-pointer opacity-70 hover:opacity-100 transition" onclick="switchTab('media')">Media</span>
+                    <span class="cursor-pointer opacity-70 hover:opacity-100 transition" onclick="switchTab('library')">Library</span>
+                    <span class="cursor-pointer tab-active transition" onclick="switchTab('all')" id="tab-all">All</span>
+                    <span class="cursor-pointer opacity-70 hover:opacity-100 transition" onclick="switchTab('settings')">Settings</span>
+                </div>
+
+                <!-- Right Profile & Notification Pill -->
+                <div class="flex gap-5 items-center relative">
+                    <i class="fas fa-dice text-lg opacity-80 cursor-pointer hover:text-[var(--ps-blue)]" onclick="playConfirm()"></i>
+                    <i class="fab fa-playstation text-[var(--ps-blue)] text-lg cursor-pointer"></i>
+                    <i class="fas fa-plus text-[var(--ps-gold)] text-lg cursor-pointer"></i>
+                    <div class="flex items-center gap-2 cursor-pointer hover:scale-105 transition" onclick="openModal('Profile', 'CHRI-TV<br>PS Plus Premium Member<br>Online')">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Chri" class="w-8 h-8 rounded-full border border-white/20 bg-purple-900">
+                        <span class="text-sm font-semibold tracking-wide hidden sm:block">CHRI-TV</span>
+                    </div>
+
+                    <!-- White Notification Pill (Clickable) -->
+                    <div class="absolute top-full right-0 mt-3 bg-white text-black px-4 py-3 rounded shadow-2xl flex items-center gap-4 cursor-pointer hover:bg-gray-100 transition animate-[slideDown_0.5s_ease-out] z-50 min-w-[280px]" onclick="openModal('Messages', '<b>Chri-TV Group</b><br>Player1: Let\'s raid tonight!<br>Player2: Ready when you are.<br>Player3: Inv sent.')">
+                        <div class="absolute -top-2 right-10 w-4 h-4 bg-white transform rotate-45"></div>
+                        <div class="w-8 h-8 bg-[var(--ps-blue)] rounded-full flex items-center justify-center text-white">
+                            <i class="fas fa-comment text-xs"></i>
+                        </div>
+                        <span class="font-medium text-sm flex-1">You have +3 new messages</span>
+                        <i class="fab fa-playstation text-[var(--ps-blue)] text-xl"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 relative w-full pointer-events-none">
+                <!-- Titles -->
+                <div id="title-area" class="absolute top-[10%] left-[6vw] transition-opacity duration-300">
+                    <p id="pub-name" class="text-xs font-bold tracking-[0.3em] opacity-80 mb-1">SONY</p>
+                    <h1 id="game-title" class="text-4xl md:text-6xl font-black tracking-tighter uppercase leading-[0.9] drop-shadow-2xl" style="font-family: 'Orbitron';">
+                        THE LAST OF US<br>PART III
+                    </h1>
+                </div>
+
+                <!-- Dynamic Widgets -->
+                <div id="widget-friends" class="glass-panel absolute bottom-[2vh] right-[6vw] flex items-center gap-4 transition-opacity duration-300 px-5 py-3 pointer-events-auto cursor-pointer" onclick="openModal('Friends', '<b>Active Now</b><br>Player 1 - Marvel\'s Spider-Man 3<br>Player 2 - Red Dead III')">
+                    <div class="flex -space-x-3">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=A" class="w-8 h-8 rounded-full border-2 border-[var(--glass-border)] bg-yellow-600">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=B" class="w-8 h-8 rounded-full border-2 border-[var(--glass-border)] bg-red-600">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=C" class="w-8 h-8 rounded-full border-2 border-[var(--glass-border)] bg-blue-600">
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold flex items-center gap-2">Friends Active now <i class="fas fa-gamepad text-xs"></i></div>
+                        <div class="text-[10px] text-[var(--text-muted)]">Playing Marvel's Spider-Man 3, Red...</div>
+                    </div>
+                </div>
+
+                <div id="widget-vision" class="glass-panel absolute bottom-[2vh] left-[6vw] flex items-center gap-4 transition-opacity duration-300 px-5 py-3 opacity-0 hidden">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_Vision_Pro_logo.svg" class="h-6" style="filter: brightness(0) invert(var(--tw-invert, 1));">
+                    <div class="w-px h-8 bg-[var(--text-muted)] mx-2 opacity-50"></div>
+                    <div class="text-sm font-light text-[var(--text-muted)]">Experience a 3D gaming feeling.</div>
+                </div>
+
+                <div id="widget-store" class="glass-panel absolute bottom-[2vh] right-[6vw] flex items-center gap-4 transition-opacity duration-300 px-5 py-3 opacity-0 hidden cursor-pointer">
+                    <i class="fas fa-shopping-basket text-xl text-[var(--text-muted)]"></i>
+                    <div>
+                        <div class="text-sm font-bold text-[var(--ps-gold)]">Explore something new ✨</div>
+                        <div class="text-[10px] text-[var(--text-muted)]">Check out the latest Games in the playstation Store.</div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Horizontal Shelf -->
+            <div id="shelf-container">
+                <div id="shelf"></div>
+            </div>
+
+            <!-- Footer Logo -->
+            <div class="absolute bottom-4 w-full flex justify-center z-0 opacity-40 pointer-events-none">
+                <i class="fab fa-playstation text-3xl drop-shadow-lg"></i>
+            </div>
+        </div>
+
+        <div id="view-media" class="view-section hide-scroll overflow-y-auto pt-32">
+            <h2 class="text-3xl font-bold mb-8 px-[6vw]">Media Apps</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-[6vw]">
+                <!-- Example Media Cards -->
+                <div class="glass-panel p-8 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition relative group" onclick="playConfirm()">
+                    <i class="fab fa-youtube text-6xl text-red-500 mb-4 transition-transform group-hover:-translate-y-2"></i>
+                    <span class="font-bold tracking-wide">YouTube</span>
+                </div>
+                <div class="glass-panel p-8 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition relative group" onclick="playConfirm()">
+                    <i class="fab fa-spotify text-6xl text-green-500 mb-4 transition-transform group-hover:-translate-y-2"></i>
+                    <span class="font-bold tracking-wide">Spotify</span>
+                </div>
+                <div class="glass-panel p-8 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition relative group" onclick="playConfirm()">
+                    <i class="fab fa-twitch text-6xl text-purple-500 mb-4 transition-transform group-hover:-translate-y-2"></i>
+                    <span class="font-bold tracking-wide">Twitch</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-library" class="view-section hide-scroll overflow-y-auto pt-32">
+            <div class="flex justify-between items-end mb-8 px-[6vw]">
+                <h2 class="text-3xl font-bold">Game Library</h2>
+                <div class="flex gap-4">
+                    <button class="glass-panel px-4 py-2 rounded-full text-sm font-semibold hover:bg-[var(--glass-border)] transition"><i class="fas fa-filter mr-2"></i>Filter</button>
+                    <button class="glass-panel px-4 py-2 rounded-full text-sm font-semibold hover:bg-[var(--glass-border)] transition"><i class="fas fa-sort mr-2"></i>Sort</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 px-[6vw]" id="library-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div id="view-settings" class="view-section hide-scroll overflow-y-auto pt-32">
+            <div class="max-w-5xl mx-auto flex gap-8 h-full pb-20 px-[6vw]">
+                <div class="w-1/3 border-r border-[var(--glass-border)] pr-6 flex flex-col gap-2">
+                    <h2 class="text-3xl font-bold mb-6 pl-4">Settings</h2>
+                    <button class="text-left w-full px-4 py-3 rounded-lg glass-panel font-bold transition flex items-center gap-3"><i class="fas fa-paint-brush w-5 text-center"></i> Theme & Display</button>
+                    <button class="text-left w-full px-4 py-3 rounded-lg hover:bg-[var(--glass-border)] opacity-70 hover:opacity-100 font-bold transition flex items-center gap-3" onclick="playHover()"><i class="fas fa-network-wired w-5 text-center"></i> Network</button>
+                    <button class="text-left w-full px-4 py-3 rounded-lg hover:bg-[var(--glass-border)] opacity-70 hover:opacity-100 font-bold transition flex items-center gap-3" onclick="playHover()"><i class="fas fa-hdd w-5 text-center"></i> Storage</button>
+                </div>
+
+                <div class="w-2/3 pl-2 pt-16 flex flex-col gap-4">
+                    <div class="glass-panel flex flex-col p-6 gap-4">
+                        <div class="flex justify-between items-center pb-4 border-b border-[var(--glass-border)]">
+                            <div>
+                                <h3 class="font-bold text-lg">System Theme</h3>
+                                <p class="text-xs text-[var(--text-muted)]">Switch between Light and Dark mode.</p>
+                            </div>
+                            <!-- Theme Toggle Switch -->
+                            <div class="w-14 h-7 bg-gray-600 rounded-full relative cursor-pointer transition-colors duration-300" id="theme-toggle-bg" onclick="toggleTheme()">
+                                <div class="w-5 h-5 bg-white rounded-full absolute left-1 top-1 transition-transform duration-300" id="theme-toggle-dot"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center py-2 cursor-pointer hover:bg-[var(--glass-border)] rounded px-2 -mx-2 transition" onclick="playConfirm()">
+                            <span class="font-semibold">Display Resolution</span>
+                            <span class="text-[var(--text-muted)] text-sm">Automatic (8K) <i class="fas fa-chevron-right ml-2"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="universal-modal" class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md shadow-2xl relative transform scale-95 transition-transform duration-300" id="modal-box">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-color)] transition text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-3 text-[var(--ps-blue)]" id="modal-title">Title</h3>
+            <div class="text-[var(--text-color)] text-sm leading-relaxed" id="modal-content">Content</div>
+            <button onclick="closeModal()" class="mt-8 w-full bg-[var(--ps-blue)] hover:bg-blue-600 text-white py-2 rounded-full font-bold transition">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // App Data matching images
+        const appsData = [
+            { id: 'store', type: 'system', title: 'PlayStation Store', bg: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=1920', cardStyle: 'bg-white text-black', innerHTML: `<div class="w-full h-full flex items-center justify-center"><i class="fas fa-shopping-bag text-5xl text-[var(--ps-blue)]"></i></div>`, pub: 'SONY' },
+            { id: 'explore', type: 'explore', title: 'Explore', bg: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920', cardStyle: 'bg-black text-[var(--ps-gold)]', innerHTML: `<div class="w-full h-full flex flex-col items-center justify-center gap-2"><div class="grid grid-cols-2 gap-2 text-3xl"><i class="fas fa-times"></i><i class="far fa-circle"></i><i class="far fa-square"></i><i class="fas fa-caret-up"></i></div></div>`, pub: 'DISCOVER' },
+            { id: 'tlou3', type: 'game', title: 'THE LAST OF US<br>PART III', bg: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400', pub: 'SONY' },
+            { id: 'spidey3', type: 'game', title: 'SPIDER-MAN 3<br>THE FINAL CHAPTER', bg: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?q=80&w=400', pub: 'MARVEL' },
+            { id: 'tlou1', type: 'game', title: 'THE LAST OF US', bg: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=400', pub: 'SONY' },
+            { id: 'gta6', type: 'game', title: 'GRAND THEFT AUTO VI', bg: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=400', pub: 'ROCKSTAR' },
+            { id: 'fc26', type: 'game', title: 'EA FC 26', bg: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400', pub: 'EA SPORTS' },
+            { id: 'rdr3', type: 'game', title: 'RED DEAD REDEMPTION III', bg: 'https://images.unsplash.com/photo-1533928298208-27ff66555d8d?q=80&w=1920', cardImg: 'https://images.unsplash.com/photo-1533928298208-27ff66555d8d?q=80&w=400', pub: 'ROCKSTAR' }
+        ];
+
+        let state = { view: 'all', activeIdx: 2, isLightMode: false };
+
+        // Navigation Flow
+        async function advanceToUserSelect() {
+            await initAudio();
+            playBoot();
+            const boot = document.getElementById('boot-screen');
+            boot.style.opacity = '0';
+            setTimeout(() => {
+                boot.classList.add('hidden');
+                const userSelect = document.getElementById('user-select-screen');
+                userSelect.classList.remove('hidden');
+                setTimeout(() => userSelect.style.opacity = '1', 50);
+            }, 1000);
+        }
+
+        function loginToHome() {
+            playConfirm();
+            if(audioInitialized) {
+                psDrone.start();
+                psDrone.volume.rampTo(-20, 2);
+            }
+            
+            const userSelect = document.getElementById('user-select-screen');
+            userSelect.style.opacity = '0';
+            userSelect.style.transform = 'scale(1.1)';
+            
+            setTimeout(() => {
+                userSelect.classList.add('hidden');
+                const app = document.getElementById('app-container');
+                app.classList.remove('hidden');
+                setTimeout(() => app.style.opacity = '1', 50);
+                updateUI();
+                populateLibrary();
+            }, 700);
+        }
+
+        // Theming
+        function toggleTheme() {
+            playHover();
+            state.isLightMode = !state.isLightMode;
+            const body = document.body;
+            const dot = document.getElementById('theme-toggle-dot');
+            const bg = document.getElementById('theme-toggle-bg');
+            
+            if (state.isLightMode) {
+                body.classList.remove('theme-dark');
+                body.classList.add('theme-light');
+                dot.style.transform = 'translateX(28px)';
+                bg.classList.replace('bg-gray-600', 'bg-[var(--ps-blue)]');
+                // Adjust vision pro logo visibility for light mode
+                document.querySelector('#widget-vision img').style.filter = 'none';
+            } else {
+                body.classList.remove('theme-light');
+                body.classList.add('theme-dark');
+                dot.style.transform = 'translateX(0)';
+                bg.classList.replace('bg-[var(--ps-blue)]', 'bg-gray-600');
+                document.querySelector('#widget-vision img').style.filter = 'brightness(0) invert(1)';
+            }
+        }
+
+        // UI Updates
+        function renderShelf() {
+            const shelf = document.getElementById('shelf');
+            shelf.innerHTML = '';
+            appsData.forEach((app, idx) => {
+                const isAct = idx === state.activeIdx;
+                const card = document.createElement('div');
+                card.className = `card ${isAct ? 'active' : ''} ${app.cardStyle || ''}`;
+                
+                if (app.innerHTML) {
+                    card.innerHTML = app.innerHTML;
+                } else {
+                    card.style.background = 'transparent';
+                    card.innerHTML = `<img src="${app.cardImg}" class="card-bg-img" alt="${app.title.replace(/<[^>]*>?/gm, '')}">`;
+                }
+
+                const btnText = app.type === 'explore' ? 'Enter Game' : 'Play Game';
+                card.innerHTML += `
+                    <div class="card-inner-ui">
+                        <div class="bg-white/20 backdrop-blur-md text-white text-[8px] font-bold px-3 py-1 rounded-full mb-3">PS6</div>
+                        <button class="w-[80%] py-2 rounded-full border border-[var(--ps-blue)] bg-black/60 text-white text-[10px] font-bold hover:bg-[var(--ps-blue)] transition" onclick="playConfirm(event)">${btnText}</button>
+                    </div>
+                `;
+
+                card.onmouseenter = () => { if(state.activeIdx !== idx) selectApp(idx); };
+                card.onclick = (e) => { if(isAct) playConfirm(e); };
+                shelf.appendChild(card);
+            });
+
+            const cardWidth = window.innerWidth * 0.1;
+            const offset = state.activeIdx * (cardWidth + (window.innerWidth*0.015));
+            shelf.style.transform = `translateX(-${offset > window.innerWidth/3 ? offset - window.innerWidth/3 : 0}px)`;
+        }
+
+        function selectApp(idx) {
+            state.activeIdx = idx;
+            playHover();
+            updateUI();
+        }
+
+        function updateUI() {
+            const app = appsData[state.activeIdx];
+            document.getElementById('dynamic-bg').style.backgroundImage = `url('${app.bg}')`;
+            document.getElementById('game-title').innerHTML = app.title;
+            document.getElementById('pub-name').innerHTML = app.pub;
+
+            const wFriends = document.getElementById('widget-friends');
+            const wVision = document.getElementById('widget-vision');
+            const wStore = document.getElementById('widget-store');
+
+            if (app.type === 'game') {
+                wFriends.classList.remove('hidden'); setTimeout(() => wFriends.style.opacity = '1', 50);
+                wVision.style.opacity = '0'; setTimeout(() => wVision.classList.add('hidden'), 300);
+                wStore.style.opacity = '0'; setTimeout(() => wStore.classList.add('hidden'), 300);
+            } else if (app.type === 'explore') {
+                wFriends.style.opacity = '0'; setTimeout(() => wFriends.classList.add('hidden'), 300);
+                wVision.classList.remove('hidden'); setTimeout(() => wVision.style.opacity = '1', 50);
+                wStore.classList.remove('hidden'); setTimeout(() => wStore.style.opacity = '1', 50);
+            } else {
+                wFriends.style.opacity = '0'; wVision.style.opacity = '0'; wStore.style.opacity = '0';
+            }
+            renderShelf();
+        }
+
+        function switchTab(viewName) {
+            playConfirm();
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('ui-layer').classList.remove('hidden');
+            if(viewName !== 'all') document.getElementById(`view-${viewName}`).classList.add('active');
+        }
+
+        // Modals
+        function openModal(title, content) {
+            playHover();
+            const modal = document.getElementById('universal-modal');
+            const box = document.getElementById('modal-box');
+            document.getElementById('modal-title').innerHTML = `<i class="fas fa-info-circle"></i> ${title}`;
+            document.getElementById('modal-content').innerHTML = content;
+            
+            modal.classList.remove('hidden');
+            // Small delay for display block to apply before animating opacity
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                box.style.transform = 'scale(1)';
+            }, 10);
+        }
+
+        function closeModal() {
+            playHover();
+            const modal = document.getElementById('universal-modal');
+            const box = document.getElementById('modal-box');
+            modal.style.opacity = '0';
+            box.style.transform = 'scale(0.95)';
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // Utilities
+        function populateLibrary() {
+            const grid = document.getElementById('library-grid');
+            const libraryGames = appsData.filter(a => a.type === 'game');
+            grid.innerHTML = '';
+            [...libraryGames, ...libraryGames, ...libraryGames].slice(0, 18).forEach((app, i) => {
+                grid.innerHTML += `
+                <div class="group cursor-pointer relative" style="animation: fadeIn 0.5s ease-out ${(i*0.05).toFixed(2)}s both;" onclick="playConfirm()">
+                    <div class="aspect-[3/4] rounded-xl bg-cover bg-center border-2 border-transparent group-hover:border-[var(--ps-blue)] transition-all duration-300 shadow-lg relative overflow-hidden" >
+                        <img src="${app.cardImg}" class="w-full h-full object-cover absolute inset-0">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-play text-3xl text-white transform scale-50 group-hover:scale-100 transition"></i>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs font-semibold truncate opacity-80 group-hover:opacity-100 transition">${app.title.replace(/<br>/g, ' ')}</p>
+                </div>`;
+            });
+        }
+
+        setInterval(() => {
+            const d = new Date();
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            document.querySelectorAll('.clock-display').forEach(el => el.innerText = timeStr);
+        }, 1000);
+
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('app-container').classList.contains('hidden')) return;
+            if (e.key === 'ArrowRight') selectApp((state.activeIdx + 1) % appsData.length);
+            if (e.key === 'ArrowLeft') selectApp((state.activeIdx - 1 + appsData.length) % appsData.length);
+            if (e.key === 'Enter') playConfirm();
+            if (e.key === 'Escape') closeModal();
+        });
+
+    </script>
+</body>
+</html>

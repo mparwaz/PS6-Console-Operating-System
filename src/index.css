@@ -1,0 +1,349 @@
+@import "tailwindcss";
+
+:root {
+  --ps-blue: #0070cc;
+  --ps-blue-glow: rgba(0, 112, 204, 0.5);
+  --ps-gold: #c5a059;
+  --ps-gold-light: #e8c77b;
+  --bg-color: #000000;
+  --text-color: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(20, 20, 25, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --overlay-gradient: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 40%, var(--bg-color) 100%);
+  --modal-bg: rgba(15, 15, 15, 0.95);
+  --card-shadow: rgba(0,0,0,0.5);
+  --user-bg: #f0f4f8;
+}
+
+body.theme-light {
+  --bg-color: #f8fafc;
+  --text-color: #0f172a;
+  --text-muted: rgba(15, 23, 42, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --overlay-gradient: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.8) 40%, var(--bg-color) 100%);
+  --modal-bg: rgba(255, 255, 255, 0.95);
+  --card-shadow: rgba(0,0,0,0.1);
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Fullscreen Dynamic Background for PS6 Dashboard */
+#dynamic-bg {
+  position: absolute;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
+  background-size: cover;
+  background-position: center 25%;
+  z-index: 0;
+  transition: background-image 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  filter: brightness(0.9);
+}
+
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-gradient);
+  z-index: 1;
+  transition: background 0.5s ease;
+  pointer-events: none;
+}
+
+#ui-layer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px var(--card-shadow);
+}
+
+.header-line {
+  position: relative;
+}
+.header-line::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--ps-blue);
+  box-shadow: 0 0 10px var(--ps-blue);
+}
+
+.tab-active {
+  border: 1px solid var(--ps-blue);
+  border-radius: 999px;
+  padding: 4px 20px;
+  box-shadow: 0 0 15px rgba(0, 112, 204, 0.4) inset;
+}
+
+/* Gold Curves on Boot Screen */
+.gold-curve {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.curve-tl {
+  top: 0;
+  left: 0;
+  width: clamp(180px, 28vw, 380px);
+  height: clamp(120px, 20vh, 240px);
+}
+
+.curve-br {
+  bottom: 0;
+  right: 0;
+  width: clamp(180px, 28vw, 380px);
+  height: clamp(120px, 20vh, 240px);
+  transform: rotate(180deg);
+}
+
+/* Shelf & Cards */
+#shelf-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6vh;
+  padding-left: 6vw;
+  overflow: visible;
+  z-index: 20;
+}
+
+#shelf {
+  display: flex;
+  gap: 1.5vw;
+  align-items: flex-end;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: visible;
+  padding-top: 30px;
+}
+
+.card {
+  width: clamp(100px, 10vw, 155px);
+  height: clamp(140px, 14vw, 215px);
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  -webkit-box-reflect: below 2px linear-gradient(transparent 60%, rgba(0,0,0,0.3));
+}
+
+.card:not(.active) {
+  opacity: 0.75;
+  transform: scale(0.95);
+}
+
+.card.active {
+  width: clamp(135px, 13.5vw, 210px);
+  height: clamp(190px, 19vw, 290px);
+  transform: translateY(-16px);
+  border: 2px solid var(--ps-blue);
+  box-shadow: 0 0 25px rgba(0, 112, 204, 0.6);
+  opacity: 1;
+  z-index: 30;
+}
+
+.card-inner-ui {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 20px 10px;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.card.active .card-inner-ui {
+  opacity: 1;
+}
+
+.user-card {
+  background: white;
+  border-radius: 16px;
+  width: 180px;
+  height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  transition: all 0.3s;
+  cursor: pointer;
+  position: relative;
+  -webkit-box-reflect: below 5px linear-gradient(transparent 50%, rgba(255,255,255,0.4));
+}
+.user-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+.user-card.selected {
+  background: linear-gradient(135deg, var(--ps-gold-light), var(--ps-gold));
+  color: white;
+  transform: translateY(-15px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(197, 160, 89, 0.4);
+}
+
+/* Sleek PlayStation Horizontal Scrollbar */
+.ps-scrollable-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 112, 204, 0.7) rgba(0, 0, 0, 0.15);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ps-scrollable-x::-webkit-scrollbar {
+  height: 8px;
+}
+.ps-scrollable-x::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  margin: 0 20px;
+}
+.ps-scrollable-x::-webkit-scrollbar-thumb {
+  background: rgba(0, 112, 204, 0.6);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.ps-scrollable-x::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 112, 204, 0.95);
+  box-shadow: 0 0 10px rgba(0, 112, 204, 0.8);
+}
+
+/* Sleek PlayStation Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 15, 20, 0.4);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 112, 204, 0.5);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 112, 204, 0.9);
+  box-shadow: 0 0 10px rgba(0, 112, 204, 0.8);
+}
+
+.view-section {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  background: var(--bg-color);
+  padding: 100px 6vw 60px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.ps-scrollable {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(197,160,89,0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(197,160,89,0); }
+  100% { box-shadow: 0 0 0 0 rgba(197,160,89,0); }
+}
+
+/* Responsive Mobile & Touch Optimizations */
+@media (max-width: 640px) {
+  #shelf-container {
+    padding-bottom: 2vh;
+    padding-left: 4vw;
+  }
+  #shelf {
+    gap: 10px;
+    padding-top: 15px;
+  }
+  .card {
+    width: 105px;
+    height: 155px;
+    border-radius: 12px;
+  }
+  .card.active {
+    width: 135px;
+    height: 195px;
+    transform: translateY(-8px);
+    border-radius: 14px;
+  }
+  .card-inner-ui {
+    padding: 10px 6px;
+  }
+  .user-card {
+    width: 150px;
+    height: 230px;
+    border-radius: 14px;
+  }
+  .view-section {
+    padding: 85px 4vw 40px;
+  }
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "PS6 Concept OS - Next-Gen Gaming & WASM Runtime",
+  "description": "PlayStation 6 Concept Dashboard UI with fully functional system apps, DualSense haptics, trophy system, theme switching, and custom WebAssembly URL game embedding runtime.",
+  "requestFramePermissions": ["display-capture", "fullscreen", "gamepad", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
